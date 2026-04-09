@@ -1,0 +1,55 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# FastAPI / Uvicorn logs
+*.log
+logs/
+
+# Environment/config secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local tooling
+.python-version
+
+# Media / large files (keep JSON seed data tracked)
+backend/data/*.mp4
+backend/data/*.avi
+backend/data/*.mov
+backend/data/*.mkv
+
