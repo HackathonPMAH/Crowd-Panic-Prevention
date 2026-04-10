@@ -5,10 +5,13 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 
-from routes.predict import _extract_features, recommendation_engine, risk_engine
+from CrowdControl_DB.database import engine
+from CrowdControl_DB.models import Base
+from routes.history import router as history_router
 from routes.predict import router as predict_router
 from routes.simulation import router as simulation_router
 from routes.simulation import simulation_state
+from services.pipeline import run_pipeline
 from utils.config import FRAME_HEIGHT, FRAME_WIDTH, WEBSOCKET_INTERVAL_SECONDS
 
 
@@ -20,6 +23,19 @@ app = FastAPI(
 
 app.include_router(simulation_router)
 app.include_router(predict_router)
+app.include_router(history_router)
+
+
+@app.on_event("startup")
+async def startup() -> None:
+    if engine is None:
+        return
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        # Keep realtime endpoints alive even if DB is temporarily unavailable.
+        return
 
 
 @app.get("/")
@@ -47,9 +63,9 @@ async def live_updates(
             frame_size = snapshot.get("frame_size", {"width": FRAME_WIDTH, "height": FRAME_HEIGHT})
             people = snapshot.get("people", [])
 
-            features, heatmap, hotspots = _extract_features(people, frame_size["width"], frame_size["height"])
-            risk = risk_engine.compute_risk(features)
-            recommendations = recommendation_engine.generate(risk, hotspots)
+            result = await run_pipeline(people, frame_size["width"], frame_size["height"])
+            risk = result["risk"]
+            print(f"[ws/live] risk={risk['risk_score']} status={risk['status']}")
 
             await websocket.send_json(
                 {
@@ -58,11 +74,11 @@ async def live_updates(
                         "size": len(people),
                         "blocked_exits": snapshot.get("blocked_exits", []),
                     },
-                    "features": features,
-                    "risk": risk,
-                    "recommendations": recommendations,
-                    "hotspots": hotspots,
-                    "heatmap": heatmap,
+                    "risk_score": risk["risk_score"],
+                    "status": risk["status"],
+                    "time_to_disaster": risk["time_to_disaster"],
+                    "risk_history": result.get("risk_history", []),
+                    **result,
                 }
             )
             await asyncio.sleep(WEBSOCKET_INTERVAL_SECONDS)

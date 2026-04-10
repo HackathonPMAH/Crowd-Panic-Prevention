@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+numpy
+sqlalchemy>=2.0
+asyncpg
+psycopg2-binary
+opencv-python
+python-dotenv

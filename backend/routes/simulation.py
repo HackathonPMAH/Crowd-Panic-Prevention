@@ -72,6 +72,10 @@ class CrowdSimulation:
         exit_pressure = 1.0 + 0.25 * len(self.blocked_exits)
 
         for person in self.people:
+            # Small continuous random drift so movement never "freezes"
+            person["vx"] = round(person["vx"] + self.random.uniform(-0.05, 0.05), 3)
+            person["vy"] = round(person["vy"] + self.random.uniform(-0.05, 0.05), 3)
+
             jitter_x = self.random.uniform(-0.35, 0.35) * exit_pressure
             jitter_y = self.random.uniform(-0.35, 0.35) * exit_pressure
 

@@ -38,6 +38,12 @@ class RiskEngine:
             "normalized_factors": normalized,
         }
 
+    def get_recent_scores(self, limit: int = 10) -> list[float]:
+        if limit <= 0:
+            return []
+        history = list(self.score_history)
+        return history[-limit:]
+
     def _trend(self) -> Tuple[str, float]:
         if len(self.score_history) < 3:
             return "stable", 0.0
@@ -51,9 +57,20 @@ class RiskEngine:
         return "stable", float(slope)
 
     def _estimate_time_to_disaster(self, current_score: float, slope: float) -> int | None:
-        if slope <= 0 or current_score >= CRITICAL_THRESHOLD:
+        if current_score >= CRITICAL_THRESHOLD:
             return 0 if current_score >= CRITICAL_THRESHOLD else None
 
+        # Use moving average of recent per-tick deltas to reduce noise.
+        if len(self.score_history) >= 4:
+            diffs = np.diff(np.array(self.score_history, dtype=np.float32))
+            recent = diffs[-3:]
+            avg_delta = float(np.mean(recent))
+            if avg_delta > 0.25:
+                remaining = CRITICAL_THRESHOLD - current_score
+                return int(max(round(remaining / avg_delta), 1))
+
+        if slope <= 0:
+            return None
+
         remaining = CRITICAL_THRESHOLD - current_score
-        seconds = int(max(round(remaining / slope), 1))
-        return seconds
+        return int(max(round(remaining / slope), 1))
