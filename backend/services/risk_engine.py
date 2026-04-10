@@ -5,8 +5,8 @@ from typing import Deque, Dict, Tuple
 
 import numpy as np
 
-from backend.models.risk_model import RiskModel
-from backend.utils.config import CRITICAL_THRESHOLD, RISK_WEIGHTS, SAFE_THRESHOLD, WARNING_THRESHOLD
+from models.risk_model import RiskModel
+from utils.config import CRITICAL_THRESHOLD, RISK_WEIGHTS, SAFE_THRESHOLD, WARNING_THRESHOLD
 
 
 class RiskEngine:

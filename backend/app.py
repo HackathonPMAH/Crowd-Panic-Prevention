@@ -5,11 +5,11 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 
-from backend.routes.predict import _extract_features, recommendation_engine, risk_engine
-from backend.routes.predict import router as predict_router
-from backend.routes.simulation import router as simulation_router
-from backend.routes.simulation import simulation_state
-from backend.utils.config import FRAME_HEIGHT, FRAME_WIDTH, WEBSOCKET_INTERVAL_SECONDS
+from routes.predict import _extract_features, recommendation_engine, risk_engine
+from routes.predict import router as predict_router
+from routes.simulation import router as simulation_router
+from routes.simulation import simulation_state
+from utils.config import FRAME_HEIGHT, FRAME_WIDTH, WEBSOCKET_INTERVAL_SECONDS
 
 
 app = FastAPI(

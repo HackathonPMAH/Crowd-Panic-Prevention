@@ -4,7 +4,7 @@ from typing import Iterable, List
 
 import numpy as np
 
-from backend.utils.config import GRID_COLS, GRID_ROWS
+from utils.config import GRID_COLS, GRID_ROWS
 
 try:
     import cv2

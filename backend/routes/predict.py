@@ -5,13 +5,13 @@ from typing import Dict, List, Tuple
 import numpy as np
 from fastapi import APIRouter, Query
 
-from backend.routes.simulation import simulation_state
-from backend.services.cv_processor import CVProcessor
-from backend.services.flow_analyzer import FlowAnalyzer
-from backend.services.heatmap import generate_heatmap
-from backend.services.recommendation_engine import RecommendationEngine
-from backend.services.risk_engine import RiskEngine
-from backend.utils.config import FRAME_HEIGHT, FRAME_WIDTH, GRID_COLS, GRID_ROWS, HOTSPOT_THRESHOLD
+from routes.simulation import simulation_state
+from services.cv_processor import CVProcessor
+from services.flow_analyzer import FlowAnalyzer
+from services.heatmap import generate_heatmap
+from services.recommendation_engine import RecommendationEngine
+from services.risk_engine import RiskEngine
+from utils.config import FRAME_HEIGHT, FRAME_WIDTH, GRID_COLS, GRID_ROWS, HOTSPOT_THRESHOLD
 
 
 router = APIRouter(tags=["prediction"])

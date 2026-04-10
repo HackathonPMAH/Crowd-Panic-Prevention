@@ -5,7 +5,7 @@ from typing import Dict
 
 import numpy as np
 
-from backend.utils.config import MAX_REFERENCE_SPEED
+from utils.config import MAX_REFERENCE_SPEED
 
 
 @dataclass

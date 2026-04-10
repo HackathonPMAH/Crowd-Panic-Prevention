@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from fastapi import APIRouter, Query
 
-from backend.utils.config import EXIT_ZONES, FRAME_HEIGHT, FRAME_WIDTH, SIMULATED_DATA_PATH
+from utils.config import EXIT_ZONES, FRAME_HEIGHT, FRAME_WIDTH, SIMULATED_DATA_PATH
 
 
 router = APIRouter(tags=["simulation"])
