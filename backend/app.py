@@ -5,14 +5,24 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 
-from CrowdControl_DB.database import engine
-from CrowdControl_DB.models import Base
-from routes.history import router as history_router
-from routes.predict import router as predict_router
-from routes.simulation import router as simulation_router
-from routes.simulation import simulation_state
-from services.pipeline import run_pipeline
-from utils.config import FRAME_HEIGHT, FRAME_WIDTH, WEBSOCKET_INTERVAL_SECONDS
+try:
+    from CrowdControl_DB.database import engine
+    from CrowdControl_DB.models import Base
+    from routes.history import router as history_router
+    from routes.predict import router as predict_router
+    from routes.simulation import router as simulation_router
+    from routes.simulation import simulation_state
+    from services.pipeline import process_input, run_pipeline
+    from utils.config import FRAME_HEIGHT, FRAME_WIDTH, WEBSOCKET_INTERVAL_SECONDS
+except ImportError:
+    from CrowdControl_DB.database import engine
+    from CrowdControl_DB.models import Base
+    from routes.history import router as history_router
+    from routes.predict import router as predict_router
+    from routes.simulation import router as simulation_router
+    from routes.simulation import simulation_state
+    from services.pipeline import process_input, run_pipeline
+    from utils.config import FRAME_HEIGHT, FRAME_WIDTH, WEBSOCKET_INTERVAL_SECONDS
 
 
 app = FastAPI(
@@ -60,10 +70,9 @@ async def live_updates(
     try:
         while True:
             snapshot = simulation_state.get_snapshot()
-            frame_size = snapshot.get("frame_size", {"width": FRAME_WIDTH, "height": FRAME_HEIGHT})
-            people = snapshot.get("people", [])
+            mock_detections = snapshot.get("people", [])
 
-            result = await run_pipeline(people, frame_size["width"], frame_size["height"])
+            result = process_input(detections=mock_detections)
             risk = result["risk"]
             print(f"[ws/live] risk={risk['risk_score']} status={risk['status']}")
 
@@ -71,13 +80,10 @@ async def live_updates(
                 {
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "crowd": {
-                        "size": len(people),
+                        "size": len(mock_detections),
                         "blocked_exits": snapshot.get("blocked_exits", []),
                     },
-                    "risk_score": risk["risk_score"],
-                    "status": risk["status"],
-                    "time_to_disaster": risk["time_to_disaster"],
-                    "risk_history": result.get("risk_history", []),
+                    "input_mode": "simulation",
                     **result,
                 }
             )

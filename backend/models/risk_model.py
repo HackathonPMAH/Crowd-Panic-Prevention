@@ -18,9 +18,15 @@ LABEL_MAP   = {0: "SAFE", 1: "WARNING", 2: "CRITICAL"}
 
 def _load_or_train():
     if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
-        print("[RiskModel] Loaded from disk.")
-        return joblib.load(MODEL_PATH), joblib.load(SCALER_PATH)
-    print("[RiskModel] PKL not found — training from scratch …")
+        try:
+            model = joblib.load(MODEL_PATH)
+            scaler = joblib.load(SCALER_PATH)
+            print("[RiskModel] Loaded from disk.")
+            return model, scaler
+        except Exception as exc:
+            print(f"[RiskModel] Failed to load saved model files: {exc}. Training from scratch.")
+    else:
+        print("[RiskModel] PKL not found — training from scratch …")
     return _train()
 
 def _build_data():

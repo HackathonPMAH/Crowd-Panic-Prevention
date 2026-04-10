@@ -22,3 +22,6 @@ class RecommendationEngine:
             "Open all exits",
             "Send alert to authorities",
         ]
+
+    def get_recommendations(self, risk: Dict[str, object], hotspots: List[str] | None = None) -> List[str]:
+        return self.generate(risk, hotspots or [])

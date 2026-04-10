@@ -5,18 +5,80 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from CrowdControl_DB import crud
-from CrowdControl_DB.database import async_session_maker
-from services.flow_analyzer import FlowAnalyzer
-from services.heatmap import generate_heatmap
-from services.recommendation_engine import RecommendationEngine
-from services.risk_engine import RiskEngine
-from utils.config import GRID_COLS, GRID_ROWS, HOTSPOT_THRESHOLD
+try:
+    from CrowdControl_DB import crud
+    from CrowdControl_DB.database import async_session_maker
+    from services.cv_processor import CVProcessor
+    from services.flow_analyzer import FlowAnalyzer
+    from services.heatmap import generate_heatmap
+    from services.recommendation_engine import RecommendationEngine
+    from services.risk_engine import RiskEngine
+    from utils.config import GRID_COLS, GRID_ROWS, HOTSPOT_THRESHOLD
+except ImportError:
+    from CrowdControl_DB import crud
+    from CrowdControl_DB.database import async_session_maker
+    from services.cv_processor import CVProcessor
+    from services.flow_analyzer import FlowAnalyzer
+    from services.heatmap import generate_heatmap
+    from services.recommendation_engine import RecommendationEngine
+    from services.risk_engine import RiskEngine
+    from utils.config import GRID_COLS, GRID_ROWS, HOTSPOT_THRESHOLD
 
-
+# ✅ INIT
+cv_processor = CVProcessor()
 _flow_analyzer = FlowAnalyzer()
 _risk_engine = RiskEngine()
 _recommendation_engine = RecommendationEngine()
+
+
+def process_input(image=None, detections=None) -> dict:
+    """Process an image or detection list and return crowd insights."""
+
+    if image is not None:
+        try:
+            # ✅ FIX: use cv_processor instead of undefined function
+            detection_result = cv_processor.detect_people(image)
+        except Exception as e:
+            print("Detection failed:", e)
+            detection_result = {"detections": [], "people": []}
+
+        raw_detections = detection_result.get("detections")
+
+        if raw_detections:
+            people = [
+                {
+                    "id": index + 1,
+                    "x": float(d["x"] + d["w"] / 2.0),
+                    "y": float(d["y"] + d["h"] / 2.0),
+                    "vx": 0.0,
+                    "vy": 0.0,
+                }
+                for index, d in enumerate(raw_detections)
+            ]
+        else:
+            people = detection_result.get("people") or []
+    else:
+        people = detections or []
+
+    features = _flow_analyzer.extract_features(people)
+
+    risk = _risk_engine.compute_risk(
+        {
+            "max_density": float(features.get("max_density", 0.0)),
+            "avg_velocity": float(features.get("avg_velocity", 0.0)),
+            "direction_conflict": float(features.get("direction_conflict", 0.0)),
+            "turbulence": float(features.get("turbulence", 0.0)),
+        }
+    )
+
+    recommendations = _recommendation_engine.get_recommendations(risk)
+
+    return {
+        "people_count": int(len(people)),
+        "features": features,
+        "risk": risk,
+        "recommendations": recommendations,
+    }
 
 
 def _hotspot_cells(heatmap: List[List[float]]) -> List[tuple[int, int, float]]:
@@ -102,24 +164,21 @@ async def _persist_async(risk: dict, features: dict, alert_message: str | None) 
                     },
                 )
     except Exception:
-        # Hackathon-friendly: never crash the realtime loop due to DB issues.
         return
-
-
+    
 async def run_pipeline(people: List[dict], width: int, height: int) -> Dict[str, object]:
     """
-    Central processing pipeline.
-    - extract features
-    - compute risk
-    - generate heatmap
-    - generate recommendations
+    Central processing pipeline
     """
+
     avg_density, max_density = _density_metrics(people, width, height)
     flow = _flow_analyzer.analyze(people)
+
     heatmap = generate_heatmap(people, width, height)
     hotspot_cells = _hotspot_cells(heatmap)
     hotspot_points = _hotspot_points(hotspot_cells, width, height)
     hotspot_cell_ids = [f"zone_r{r}_c{c}" for r, c, _ in hotspot_cells]
+
     zones = _zones_from_heatmap(heatmap)
 
     features: Dict[str, object] = {
@@ -143,13 +202,13 @@ async def run_pipeline(people: List[dict], width: int, height: int) -> Dict[str,
             "turbulence": float(features["turbulence"]),
         }
     )
+
     recommendations = _recommendation_engine.generate(risk, hotspot_cell_ids)
 
     alert_message = None
     if risk["status"] == "CRITICAL":
         alert_message = "; ".join(recommendations)[:500]
 
-    # Non-blocking persistence (best-effort).
     asyncio.create_task(_persist_async(risk, features, alert_message))
 
     return {
@@ -162,4 +221,3 @@ async def run_pipeline(people: List[dict], width: int, height: int) -> Dict[str,
         "recommendations": recommendations,
         "risk_history": _risk_engine.get_recent_scores(10),
     }
-

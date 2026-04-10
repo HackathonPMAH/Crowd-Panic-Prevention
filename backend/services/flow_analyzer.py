@@ -59,3 +59,6 @@ class FlowAnalyzer:
             "avg_velocity": round(avg_velocity, 3),
             "turbulence": round(turbulence, 3),
         }
+
+    def extract_features(self, people: List[dict]) -> Dict[str, object]:
+        return self.analyze(people)
